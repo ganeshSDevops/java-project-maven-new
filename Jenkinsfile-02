@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    tools{
+        maven 'maven3'
+    }
+    
+    stages{
+        stage('git checkout'){
+            steps{
+                git 'https://github.com/ganeshSDevops/java-project-maven-new.git'
+            }
+        }
+        
+        stage('compile ,test and build code'){
+            steps{
+                sh '''
+                mvn clean package
+                '''
+            }
+        }
+        
+        stage('Sonarqube Analysis') {
+            steps {
+                 withSonarQubeEnv('SonarQube') {
+                    sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar'
+                }
+            }
+        }
+        
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 1, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+        
+        stage(' push artifact to s3'){
+            steps{
+                echo "push artifacts to s3"
+            }
+        }
+    }
+    post{
+        success{
+            echo " pipeline succesful"
+        }
+        failure{
+            echo " pipleine failed"
+        }
+        always{
+            cleasWs()
+        }
+    }
+    
+}
