@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+    tools{
+        maven 'maven3'
+    }
+    stages{
+        stage('git checkout'){
+            steps{
+                git 'https://github.com/ganeshSDevops/java-project-maven-new.git'
+            }
+        }
+        
+        stage('compile-test-build code'){
+            steps{
+                sh'''
+                mvn clean package
+                '''
+            }
+        }
+        
+        stage('sonar anaylsis'){
+            steps{
+                withSonarQubeEnv('SonarQube') {
+                    sh 'mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.7.0.1746:sonar'
+                }
+            }
+        }
+        
+        stage('sonar quality gate'){
+            steps{
+                timeout(time:1 ,unit: 'MINUTES'){
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+        
+        stage('upload artifact to nexus'){
+            steps{
+                nexusArtifactUploader artifacts: [[artifactId: 'myapp', classifier: '', file: 'target/myapp.war', type: 'war']], credentialsId: 'nexusCred', groupId: 'in.reyaz', nexusUrl: '98.83.136.49:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'hotstar', version: '8.3.3-SNAPSHOT'
+            }
+        }
+    }
+}
